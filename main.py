@@ -4,7 +4,7 @@ from tkinter import filedialog
 
 def merge_pdf(pdf_paths : list, out_path : str):
     merger = PdfMerger()
-    for pdf in pdf_paths:
+    for pdf in reversed(pdf_paths):
         assert(type(pdf) == str)
         merger.append(pdf)
     merger.write(out_path)
