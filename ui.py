@@ -69,14 +69,17 @@ class ItemRow(QWidget):
     def __init__(self, path : str, page_count : int):
         super().__init__()
 
+        self.preview_images = {}
+
         self.path = path
         self.page_count = page_count
 
         reader = PdfReader(path)
 
-        self.image = pdf2img.convert_from_path(path, dpi=20, first_page=0, last_page=1)[0]
+        image = pdf2img.convert_from_path(path, dpi=20, first_page=1, last_page=1)[0].toqpixmap().scaled(100, 150, Qt.KeepAspectRatio)
+        self.preview_images[1] = image
         self.image_label = QLabel(self)
-        self.image_label.setPixmap(self.image.toqpixmap().scaled(100, 150, Qt.KeepAspectRatio))
+        self.image_label.setPixmap(image)
         self.image_label.setScaledContents(True)
 
         self.path_label = QLabel(f".../{path.split("/")[-1]}")
@@ -155,6 +158,13 @@ class ItemRow(QWidget):
 
     def start_page_changed(self, value):
         self.end_page_spin_box.setRange(value, self.page_count)
+        if value in self.preview_images:
+            self.image_label.setPixmap(self.preview_images[value])
+            return
+        image = pdf2img.convert_from_path(self.path, dpi=20, first_page=value, last_page=value)[0].toqpixmap().scaled(
+            100, 150, Qt.KeepAspectRatio)
+        self.preview_images[value] = image
+        self.image_label.setPixmap(image)
 
 
     def end_page_changed(self, value):
