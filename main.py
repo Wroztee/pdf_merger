@@ -1,12 +1,16 @@
-from PyPDF2 import PdfMerger
+from PyPDF2 import PdfMerger, PdfReader
 from tkinter import Tk
 from tkinter import filedialog
 
-def merge_pdf(pdf_paths : list, out_path : str):
+def merge_pdf(pdf_paths : list, out_path : str, pages : list = None):
     merger = PdfMerger()
-    for pdf in reversed(pdf_paths):
+    for i in range(len(pdf_paths)):
+        pdf = pdf_paths[i]
         assert(type(pdf) == str)
-        merger.append(pdf)
+        if pages is None or pages[i] is None:
+            merger.append(pdf)
+        else:
+            merger.append(pdf, pages=pages[i])
     merger.write(out_path)
     merger.close()
 
@@ -25,6 +29,14 @@ def select_out_path(start_dir : str = "./") -> str:
     if out_path[-4:] != ".pdf":
         out_path += ".pdf"
     return out_path
+
+
+def get_page_count(pdf_path : str) -> int:
+    file = open(pdf_path, "rb")
+    reader = PdfReader(file)
+    page_count = len(reader.pages)
+    file.close()
+    return page_count
 
 
 if __name__ == "__main__":
