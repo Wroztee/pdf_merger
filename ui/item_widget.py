@@ -1,71 +1,11 @@
-from PySide6.QtWidgets import QApplication, QWidget, QLabel, QVBoxLayout, QHBoxLayout, QPushButton, QSpinBox, QSizePolicy, QScrollArea, QMainWindow
-from PySide6.QtCore import QSize, Qt
+from PySide6.QtWidgets import QWidget, QLabel, QVBoxLayout, QHBoxLayout, QPushButton, QSpinBox, QSizePolicy
+from PySide6.QtCore import QSize, Qt, QMimeData
+from PySide6.QtGui import QDrag, QPixmap, QMouseEvent, QPalette
 import pdf2image as pdf2img
 from PyPDF2 import PdfReader
 
-from main import merge_pdf, select_pdf_paths, select_out_path, get_page_count
 
-class MainWindow(QMainWindow):
-    def __init__(self):
-        super().__init__()
-
-        self.setWindowTitle("PDF Merger")
-        self.setGeometry(100, 100, 700, 400)
-
-        self.scroll_area = QScrollArea()
-        self.scroll_area.setWidgetResizable(True)
-        self.setCentralWidget(self.scroll_area)
-        self.scroll_widget = QWidget()
-        self.scroll_area.setWidget(self.scroll_widget)
-
-        self.load_button = QPushButton("Load PDFs")
-        self.load_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        self.load_button.clicked.connect(self.load_pdf_files)
-        self.generate_button = QPushButton("Generate PDF")
-        self.generate_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        self.generate_button.clicked.connect(self.generate_pdf)
-
-        top_button_layout = QHBoxLayout()
-        top_button_layout.addWidget(self.load_button)
-        top_button_layout.addWidget(self.generate_button)
-
-        self.main_layout = QVBoxLayout()
-        self.main_layout.addLayout(top_button_layout)
-        self.main_layout.addStretch()
-
-        self.scroll_widget.setLayout(self.main_layout)
-
-        self.item_widgets = []
-
-
-    def add_pdf(self, path : str, page_count : int):
-        pdf_widget = ItemRow(path, page_count)
-        self.main_layout.insertWidget(len(self.item_widgets), pdf_widget)
-        self.item_widgets.append(pdf_widget)
-
-
-    def load_pdf_files(self):
-        pdf_paths = select_pdf_paths()
-        for path in pdf_paths:
-            page_count = get_page_count(path)
-            self.add_pdf(path, page_count)
-
-
-    def generate_pdf(self):
-        out_path = select_out_path()
-
-        paths = []
-        pages = []
-
-        for widget in self.item_widgets:
-            paths.append(widget.path)
-            pages.append((widget.start_page_spin_box.value() - 1, widget.end_page_spin_box.value()))
-
-        merge_pdf(paths, out_path, pages)
-        print(f"PDF created at {out_path}")
-
-
-class ItemRow(QWidget):
+class PdfItemWidget(QWidget):
     def __init__(self, path : str, page_count : int):
         super().__init__()
 
@@ -74,6 +14,9 @@ class ItemRow(QWidget):
         self.path = path
         self.page_count = page_count
 
+        self.setAutoFillBackground(True)
+        self.setBackgroundRole(QPalette.Mid)
+
         reader = PdfReader(path)
 
         image = pdf2img.convert_from_path(path, dpi=20, first_page=1, last_page=1)[0].toqpixmap().scaled(100, 150, Qt.KeepAspectRatio)
@@ -81,6 +24,7 @@ class ItemRow(QWidget):
         self.image_label = QLabel(self)
         self.image_label.setPixmap(image)
         self.image_label.setScaledContents(True)
+        self.image_label.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
         self.path_label = QLabel(f".../{path.split("/")[-1]}")
         self.path_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
@@ -174,40 +118,31 @@ class ItemRow(QWidget):
     def move_item_up(self):
         parent = self.parentWidget()
         current_idx = parent.item_widgets.index(self)
-        if (current_idx == 0):
-            return
-        
-        parent.item_widgets.pop(current_idx)
-        parent.item_widgets.insert(current_idx - 1, self)
-
-        parent.main_layout.removeWidget(self)
-        parent.main_layout.insertWidget(current_idx - 1, self)
+        parent.move_item_widget(current_idx, current_idx - 1)
 
 
     def move_item_down(self):
         parent = self.parentWidget()
         current_idx = parent.item_widgets.index(self)
-        if (current_idx == len(parent.item_widgets) - 1):
-            return
-        
-        parent.item_widgets.pop(current_idx)
-        parent.item_widgets.insert(current_idx + 1, self)
-
-        parent.main_layout.removeWidget(self)
-        parent.main_layout.insertWidget(current_idx + 1, self)
+        parent.move_item_widget(current_idx, current_idx + 1)
 
 
     def remove_item(self):
         parent = self.parentWidget()
         parent.item_widgets.remove(self)
-        parent.main_layout.removeWidget(self)
+        parent.layout().removeWidget(self)
         self.deleteLater()
 
 
-if __name__ == "__main__":
-    app = QApplication()
+    def mousePressEvent(self, event: QMouseEvent) -> None:
+        if event.buttons() == Qt.MouseButton.LeftButton:
+            drag = QDrag(self)
+            mime = QMimeData()
+            drag.setMimeData(mime)
 
-    window = MainWindow()
-    window.show()
+            pixmap = QPixmap(self.image_label.size())
+            self.image_label.render(pixmap)
+            drag.setPixmap(pixmap)
 
-    app.exec()
+            drag.exec(Qt.DropAction.MoveAction)
+
