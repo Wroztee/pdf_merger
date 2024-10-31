@@ -2,5 +2,6 @@ __pycache__/
 ui/__pycache__/
 
 *.pdf
+phb_chapters.py
 
 debug.log
