@@ -1,8 +1,10 @@
 from PySide6.QtWidgets import QWidget, QLabel, QVBoxLayout, QHBoxLayout, QPushButton, QSpinBox, QSizePolicy
-from PySide6.QtCore import QSize, Qt, QMimeData
-from PySide6.QtGui import QDrag, QPixmap, QMouseEvent, QPalette
+from PySide6.QtCore import QSize, QMimeData, Qt
+from PySide6.QtGui import QDrag, QPixmap, QMouseEvent, QPalette, QColor, QImage, QPainter
 import pdf2image as pdf2img
 from PyPDF2 import PdfReader
+
+from utils import add_image_transparency
 
 
 class PdfItemWidget(QWidget):
@@ -16,6 +18,7 @@ class PdfItemWidget(QWidget):
 
         self.setAutoFillBackground(True)
         self.setBackgroundRole(QPalette.Mid)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
         reader = PdfReader(path)
 
@@ -26,7 +29,7 @@ class PdfItemWidget(QWidget):
         self.image_label.setScaledContents(True)
         self.image_label.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
-        self.path_label = QLabel(f".../{path.split("/")[-1]}")
+        self.path_label = QLabel(f".../{path.split('/')[-1]}")
         self.path_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
         self.title_label = QLabel()
@@ -142,7 +145,7 @@ class PdfItemWidget(QWidget):
 
             pixmap = QPixmap(self.image_label.size())
             self.image_label.render(pixmap)
-            drag.setPixmap(pixmap)
+            drag.setPixmap(add_image_transparency(pixmap, 127))
 
             drag.exec(Qt.DropAction.MoveAction)
 

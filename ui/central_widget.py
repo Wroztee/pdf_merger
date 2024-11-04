@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import QScrollArea, QWidget, QLabel
+from PySide6.QtWidgets import QScrollArea, QWidget, QLabel, QFrame
 from PySide6.QtCore import Qt, QEvent
 from PySide6.QtGui import QDragEnterEvent, QDragLeaveEvent, QDragMoveEvent, QDropEvent
 
@@ -21,6 +21,12 @@ class CentralScrollAreaWidget(QWidget):
         self.item_widgets = []
         self.main_window = None
 
+        self.drag_indicator = QFrame(self)
+        self.drag_indicator.setFrameShape(QFrame.HLine)
+        self.drag_indicator.setFixedSize(500, 6)
+        self.drag_indicator.hide()
+
+
 
     def move_item_widget(self, old_idx : int, new_idx : int):
         if (new_idx >= len(self.item_widgets) or new_idx < 0):
@@ -38,15 +44,20 @@ class CentralScrollAreaWidget(QWidget):
 
 
     def dragLeaveEvent(self, event: QDragLeaveEvent):
+        self.drag_indicator.hide()
         event.accept()
 
 
     def dragMoveEvent(self, event: QDragMoveEvent):
-        print(self.get_drop_index(event))
+        drop_idx = self.get_drop_index(event)
+        if drop_idx is not None:
+            self.drag_indicator.move(5, self.layout().itemAt(drop_idx).geometry().y() - 3 - self.layout().spacing() / 2)
+            self.drag_indicator.show()
         event.accept()
 
 
     def dropEvent(self, event : QDropEvent):
+        self.drag_indicator.hide()
         drop_idx = self.get_drop_index(event)
         if drop_idx is None:
             return

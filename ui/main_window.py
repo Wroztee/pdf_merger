@@ -1,8 +1,10 @@
 from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QSizePolicy, QScrollArea, QMainWindow
+from PySide6.QtGui import QResizeEvent, QPalette
 
 from pdf_utils import merge_pdf, select_pdf_paths, select_out_path, get_page_count
 from ui.central_widget import CentralScrollArea
 from ui.item_widget import PdfItemWidget
+from ui.load_button import LoadPDFButton
 
 
 class MainWindow(QMainWindow):
@@ -19,18 +21,27 @@ class MainWindow(QMainWindow):
         self.scroll_widget.main_window = self
         self.setCentralWidget(self.scroll_area)
 
-        self.load_button = QPushButton("Load PDFs")
-        self.load_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        self.load_button.clicked.connect(self.load_pdf_files)
-        self.generate_button = QPushButton("Generate PDF")
+        self.load_widget = QWidget()
+        self.load_widget.setAutoFillBackground(True)
+        self.load_widget.setBackgroundRole(QPalette.Mid)
+        self.load_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.load_button = LoadPDFButton()
+        self.load_button.mousePressEvent = lambda event: self.load_pdf_files()
+        self.load_widget_layout = QHBoxLayout()
+        self.load_widget_layout.addWidget(self.load_button)
+        self.load_widget_layout.addStretch()
+        self.load_widget.setLayout(self.load_widget_layout)
+
+        self.generate_button = QPushButton("Generate PDF", self)
         self.generate_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.generate_button.clicked.connect(self.generate_pdf)
+        self.generate_button.setFixedSize(95, 25)
 
-        top_button_layout = QHBoxLayout()
-        top_button_layout.addWidget(self.load_button)
-        top_button_layout.addWidget(self.generate_button)
+        #top_button_layout = QHBoxLayout()
+        #top_button_layout.addWidget(self.load_button)
+        #top_button_layout.addWidget(self.generate_button)
 
-        self.main_layout.addLayout(top_button_layout)
+        self.main_layout.addWidget(self.load_widget)
         self.main_layout.addStretch()
 
         self.scroll_widget.setLayout(self.main_layout)
@@ -61,6 +72,10 @@ class MainWindow(QMainWindow):
 
         merge_pdf(paths, out_path, pages)
         print(f"PDF created at {out_path}")
+
+
+    def resizeEvent(self, event: QResizeEvent):
+        self.generate_button.move(event.size().width() - 100, event.size().height() - 30)
 
 
 
